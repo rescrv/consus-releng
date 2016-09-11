@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+import binascii
+import datetime
+import glob
+import json
+import os
+import os.path
+import re
+import subprocess
+
+os.chdir(os.path.dirname(__file__))
+
+subprocess.check_call(('docker', 'pull', 'centos:6'))
+subprocess.check_call(('docker', 'pull', 'centos:7'))
+subprocess.check_call(('docker', 'pull', 'debian:7'))
+subprocess.check_call(('docker', 'pull', 'debian:8'))
+subprocess.check_call(('docker', 'pull', 'fedora:20'))
+subprocess.check_call(('docker', 'pull', 'fedora:21'))
+subprocess.check_call(('docker', 'pull', 'fedora:22'))
+subprocess.check_call(('docker', 'pull', 'fedora:23'))
+subprocess.check_call(('docker', 'pull', 'fedora:24'))
+subprocess.check_call(('docker', 'pull', 'ubuntu:12.04'))
+subprocess.check_call(('docker', 'pull', 'ubuntu:14.04'))
+subprocess.check_call(('docker', 'pull', 'ubuntu:16.04'))
+subprocess.check_call(('docker', 'pull', 'ubuntu:16.10'))
+
+subprocess.check_call(('docker', 'pull', 'rescrv/texlive-2016'))
+subprocess.check_call(('docker', 'build', '-t', 'consusteam/dist', 'dist'))
+subprocess.check_call(('docker', 'build', '-t', 'consusteam/doc', 'doc'))
+
+for x in glob.glob('dist/*/Dockerfile'):
+    x = os.path.dirname(x)
+    subprocess.check_call(('docker', 'build', x))
+
+for x in glob.glob('doc/*/Dockerfile'):
+    x = os.path.dirname(x)
+    subprocess.check_call(('docker', 'build', x))
+
+for x in glob.glob('test/src/*/Dockerfile'):
+    x = os.path.dirname(x)
+    subprocess.check_call(('docker', 'build', x))
+
+for x in glob.glob('test/git/*/Dockerfile'):
+    x = os.path.dirname(x)
+    subprocess.check_call(('docker', 'build', x))

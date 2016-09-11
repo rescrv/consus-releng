@@ -1,0 +1,179 @@
+################################################################################
+################################# Distribution #################################
+################################################################################
+
+# Build po6 tarballs
+source po6 git git://git.rescrv.net/po6 branch master;
+
+process dist:po6 dockerfile dist/po6
+    dependencies po6
+    artifacts tar.gz, tar.bz2;
+
+# Build e tarballs
+source e git git://git.rescrv.net/e branch master;
+
+process prereqs:e dockerfile dist/e-prereqs
+    dependencies dist:po6=>tar.gz
+    artifacts install-dir;
+
+process dist:e dockerfile dist/e
+    dependencies e, soft prereqs:e=>install-dir
+    artifacts tar.gz, tar.bz2;
+
+# Build treadstone tarballs
+source treadstone git git://git.rescrv.net/libtreadstone branch master;
+
+process prereqs:treadstone dockerfile dist/treadstone-prereqs
+    dependencies prereqs:e=>install-dir, dist:e=>tar.gz
+    artifacts install-dir;
+
+process dist:treadstone dockerfile dist/treadstone
+    dependencies treadstone, soft prereqs:treadstone=>install-dir
+    artifacts tar.gz, tar.bz2;
+
+# Build busybee tarballs
+source busybee git git://git.rescrv.net/busybee branch master;
+
+process prereqs:busybee dockerfile dist/busybee-prereqs
+    dependencies prereqs:treadstone=>install-dir, dist:treadstone=>tar.gz
+    artifacts install-dir;
+
+process dist:busybee dockerfile dist/busybee
+    dependencies busybee, soft prereqs:busybee=>install-dir
+    artifacts tar.gz, tar.bz2;
+
+# Build replicant tarballs
+source replicant git git://git.rescrv.net/replicant branch master;
+
+process prereqs:replicant dockerfile dist/replicant-prereqs
+    dependencies prereqs:busybee=>install-dir, dist:busybee=>tar.gz
+    artifacts install-dir;
+
+process dist:replicant dockerfile dist/replicant
+    dependencies replicant, soft prereqs:replicant=>install-dir
+    artifacts tar.gz, tar.bz2;
+
+# Build consus tarballs
+source consus git ssh://git@git.rescrv.net/consus branch master;
+
+process prereqs:consus dockerfile dist/consus-prereqs
+    dependencies prereqs:replicant=>install-dir, dist:replicant=>tar.gz
+    artifacts install-dir;
+
+process dist:consus dockerfile dist/consus
+    dependencies consus, soft prereqs:consus=>install-dir
+    artifacts tar.gz, tar.bz2, tests.tar.gz;
+
+################################################################################
+################################# Documentation ################################
+################################################################################
+
+process doc:replicant dockerfile doc/replicant
+    dependencies dist:replicant=>tar.gz
+    artifacts pdf, html;
+
+process doc:consus dockerfile doc/consus
+    dependencies dist:consus=>tar.gz
+    artifacts pdf, html;
+
+################################################################################
+#################################### Reports ###################################
+################################################################################
+
+process clang:scanbuild dockerfile test/scanbuild
+    dependencies
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:consus=>tar.gz
+    artifacts
+        po6.txt,
+        e.txt,
+        treadstone.txt,
+        busybee.txt,
+        replicant.txt,
+        consus.txt;
+
+################################################################################
+################################### Binaries ###################################
+################################################################################
+
+# Universal Linux amd64 Binary
+source popt.tar.gz fetch http://rpm5.org/files/popt/popt-1.16.tar.gz
+    sha256 e728ed296fe9f069a0e005003c3d6b2dde3d9cad453422a10d6558616d304cc8;
+source glog.tar.gz fetch https://github.com/google/glog/archive/v0.3.4.tar.gz
+    sha256 ce99d58dce74458f7656a68935d7a0c048fa7b4626566a71b7f4e545920ceb10;
+source sparsehash.tar.gz fetch https://github.com/sparsehash/sparsehash/archive/sparsehash-2.0.3.tar.gz
+    sha256 05e986a5c7327796dad742182b2d10805a8d4f511ad090da0490f146c1ff7a8c;
+source leveldb.tar.gz fetch https://github.com/google/leveldb/archive/v1.19.tar.gz
+    sha256 7d7a14ae825e66aabeb156c1c3fae9f9a76d640ef6b40ede74cc73da937e5202;
+process bin:linux-amd64 dockerfile bin/linux-amd64
+    dependencies
+        popt.tar.gz,
+        glog.tar.gz,
+        sparsehash.tar.gz,
+        leveldb.tar.gz,
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:consus=>tar.gz
+    artifacts tar.gz, tar.bz2, txt;
+
+################################################################################
+############################## Installation Tests ##############################
+################################################################################
+
+# Source tarballs
+process test:src:ubuntu12.04 dockerfile test/src/ubuntu12.04
+    dependencies
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:consus=>tar.gz;
+process test:src:ubuntu14.04 dockerfile test/src/ubuntu14.04
+    dependencies
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:consus=>tar.gz;
+process test:src:ubuntu16.04 dockerfile test/src/ubuntu16.04
+    dependencies
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:consus=>tar.gz;
+process test:src:ubuntu16.10 dockerfile test/src/ubuntu16.10
+    dependencies
+        dist:po6=>tar.gz,
+        dist:e=>tar.gz,
+        dist:busybee=>tar.gz,
+        dist:replicant=>tar.gz,
+        dist:treadstone=>tar.gz,
+        dist:consus=>tar.gz;
+
+# Universal amd64 binary
+process test:bin:fedora23 dockerfile test/bin/fedora23
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+process test:bin:fedora24 dockerfile test/bin/fedora24
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+process test:bin:fedora25 dockerfile test/bin/fedora25
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+
+process test:bin:ubuntu12.04 dockerfile test/bin/ubuntu12.04
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+process test:bin:ubuntu14.04 dockerfile test/bin/ubuntu14.04
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+process test:bin:ubuntu16.04 dockerfile test/bin/ubuntu16.04
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;
+process test:bin:ubuntu16.10 dockerfile test/bin/ubuntu16.10
+    dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;

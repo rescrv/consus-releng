@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+
+import collections
+import os
+import re
+import subprocess
+import sys
+
+def is_elf(path):
+    out = subprocess.check_output(('file', '-b', path))
+    return out.startswith(b'ELF')
+
+def is_static(path):
+    out = subprocess.check_output(('file', '-b', path))
+    return out.startswith(b'ELF') and b'statically linked' in out
+
+def is_dynamic(path):
+    out = subprocess.check_output(('file', '-b', path))
+    return out.startswith(b'ELF') and b'dynamically linked' in out
+
+def glibc_version(fields):
+    glibc = [f for f in fields if f.lower().startswith('glibc')]
+    if glibc:
+        return glibc[-1]
+    return None
+
+def parse_symbols(path):
+    assert is_dynamic(path)
+    out = subprocess.check_output(('objdump', '-T', path))
+    out = out.decode('ascii', 'ignore')
+    for line in out.split('\n'):
+        line = line.strip()
+        line = line.replace('\t', ' ')
+        if not line: continue
+        if line == 'DYNAMIC SYMBOL TABLE:': continue
+        if 'file format elf' in line: continue
+        if not re.match('^[a-zA-Z0-9]{16}', line):
+            print('error: unknown line', line)
+            continue
+        value = line[:16]
+        line = line[17:]
+        flags = line[:7]
+        line = line[7:].strip()
+        section, line = line.split(' ', 1)
+        line = line.strip()
+        alignsize, line = line.split(' ', 1)
+        line = line.strip()
+        if ' ' in line:
+            extra, symbol = line.split(' ', 1)
+        else:
+            extra, symbol = '', line
+        extra = extra.strip()
+        symbol = symbol.strip()
+        yield(value, flags, section, alignsize, extra, symbol)
+
+non_elf = set()
+statics = set()
+dynamics = set()
+glibcs = {}
+
+ROOT = sys.argv[1]
+for root, dirs, files in os.walk(ROOT):
+    for f in files:
+        path = os.path.join(root, f)
+        if not is_elf(path):
+            non_elf.add(path)
+            continue
+        if is_static(path):
+            statics.add(path)
+            continue
+        dynamics.add(path)
+        for value, flags, section, alignsize, extra, symbol in parse_symbols(path):
+            if extra.lower().startswith('glibc'):
+                glibcs[extra] = symbol
+
+fail = False
+
+print('Non executable files:')
+for x in sorted(non_elf):
+    print(os.path.relpath(x, ROOT))
+
+print('\nStatically linked executables:')
+for x in sorted(statics):
+    print(os.path.relpath(x, ROOT))
+
+libraries = collections.defaultdict(list)
+
+print('\nDynamic executables (and what they link):')
+for x in sorted(dynamics):
+    path = os.path.relpath(x, ROOT)
+    out = subprocess.check_output(('ldd', path), cwd=ROOT)
+    print(path + ':')
+    print(out.decode('utf8').rstrip())
+    for lib in out.decode('utf8').split('\n'):
+        if not lib: continue
+        libraries[lib.strip().split(' ')[0].strip()].append(path)
+
+print('\nLibraries linked (and what links them):')
+cpp = False
+for lib, bins in sorted(libraries.items()):
+    print(lib + ':')
+    if lib.startswith('libstdc++'):
+        cpp = True
+    for b in sorted(bins):
+        print('\t' + b)
+
+print()
+glibc_version = ()
+for x in sorted(glibcs.keys()):
+    if re.match(r'^GLIBC(XX)?_\d+(\.\d+)*$', x):
+        version = tuple(x.split('_', 1)[1].split('.'))
+        glibc_version = max(glibc_version, version)
+    elif x == 'GLIBC_PRIVATE':
+        print('Error:  linking private glibc symbols')
+        fail = True
+    elif x == 'glibc_skip_solib_resolver':
+        pass
+    else:
+        print('unknown glibc symbol', x)
+        fail = True
+print('Minimum glibc version:', '.'.join(glibc_version))
+if glibc_version >= ('3',):
+    print('Warning: the glibc version is greater than 3.X, which likely means something links libstdc++ dynamically')
+if cpp:
+    print('Error: something still links libstdc++ dynamically')

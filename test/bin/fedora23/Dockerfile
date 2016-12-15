@@ -1,4 +1,4 @@
-FROM        fedora:24
+FROM        fedora:23
 MAINTAINER  robert@consus.io
 
 RUN yum install -y tar net-tools

@@ -161,6 +161,17 @@ process test:src:ubuntu16.10 dockerfile test/src/ubuntu16.10
         dist:treadstone=>tar.gz,
         dist:consus=>tar.gz;
 
+# Git repos
+process test:git:ubuntu14.04 dockerfile test/git/ubuntu14.04
+    dependencies po6, e, treadstone, busybee, replicant, consus,
+    dist:consus=>tar.gz;
+process test:git:ubuntu16.04 dockerfile test/git/ubuntu16.04
+    dependencies po6, e, treadstone, busybee, replicant, consus,
+    dist:consus=>tar.gz;
+process test:git:ubuntu16.10 dockerfile test/git/ubuntu16.10
+    dependencies po6, e, treadstone, busybee, replicant, consus,
+    dist:consus=>tar.gz;
+
 # Universal amd64 binary
 process test:bin:fedora23 dockerfile test/bin/fedora23
     dependencies dist:consus=>tar.gz, dist:consus=>tests.tar.gz, bin:linux-amd64=>tar.gz;

@@ -22,6 +22,7 @@ function extract_script_from_dist
     cut -c 3- "/tmp/tarball/consus-${CONSUS_VERSION}/${script_path}" > "${out_path}"
 }
 
+apt-get clean
 extract_script_from_dist "${GLOBAL_INSTALL_SCRIPT}" /tmp/install.sh
 
 mkdir -p /tmp/bin

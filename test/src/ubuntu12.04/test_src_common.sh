@@ -24,6 +24,7 @@ function extract_script_from_dist
 
 extract_script_from_dist "${CONSUS_SRC_PREREQ_INSTALL}" /tmp/src_prereq_install.sh
 extract_script_from_dist "${GLOBAL_INSTALL_SCRIPT}" /tmp/install.sh
+apt-get clean
 . /tmp/src_prereq_install.sh
 cd /tmp
 cp "${MINION_ARTIFACT_DIST_PO6_TAR_GZ}" .

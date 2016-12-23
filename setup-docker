@@ -15,11 +15,8 @@ subprocess.check_call(('docker', 'pull', 'centos:6'))
 subprocess.check_call(('docker', 'pull', 'centos:7'))
 subprocess.check_call(('docker', 'pull', 'debian:7'))
 subprocess.check_call(('docker', 'pull', 'debian:8'))
-subprocess.check_call(('docker', 'pull', 'fedora:20'))
-subprocess.check_call(('docker', 'pull', 'fedora:21'))
-subprocess.check_call(('docker', 'pull', 'fedora:22'))
-subprocess.check_call(('docker', 'pull', 'fedora:23'))
 subprocess.check_call(('docker', 'pull', 'fedora:24'))
+subprocess.check_call(('docker', 'pull', 'fedora:25'))
 subprocess.check_call(('docker', 'pull', 'ubuntu:12.04'))
 subprocess.check_call(('docker', 'pull', 'ubuntu:14.04'))
 subprocess.check_call(('docker', 'pull', 'ubuntu:16.04'))
@@ -38,6 +35,10 @@ for x in glob.glob('doc/*/Dockerfile'):
     subprocess.check_call(('docker', 'build', x))
 
 for x in glob.glob('test/src/*/Dockerfile'):
+    x = os.path.dirname(x)
+    subprocess.check_call(('docker', 'build', x))
+
+for x in glob.glob('test/bin/*/Dockerfile'):
     x = os.path.dirname(x)
     subprocess.check_call(('docker', 'build', x))
 
